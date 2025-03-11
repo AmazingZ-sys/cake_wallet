@@ -30,7 +30,7 @@ class SecurityBackupPage extends BasePage {
   @override
   Widget body(BuildContext context) {
     return Container(
-        padding: EdgeInsets.only(top: 10),
+        padding: EdgeInsets.only(top: 0),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (!_isHardwareWallet)
             SettingsCellWithArrow(

@@ -40,7 +40,7 @@ class DesktopDashboardPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 400,
+            width: 280,
             child: balancePage,
           ),
           Flexible(
@@ -49,7 +49,10 @@ class DesktopDashboardPage extends StatelessWidget {
               child: Navigator(
                 key: desktopKey,
                 initialRoute: Routes.desktop_actions,
-                onGenerateRoute: (settings) => Router.createRoute(settings),
+                onGenerateRoute: (settings) {
+                  print("Navigated to: ${settings.name}"); // 打印当前路由
+                  return Router.createRoute(settings);
+                },
                 onGenerateInitialRoutes: (NavigatorState navigator, String initialRouteName) {
                   return [
                     navigator.widget.onGenerateRoute!(RouteSettings(name: initialRouteName))!

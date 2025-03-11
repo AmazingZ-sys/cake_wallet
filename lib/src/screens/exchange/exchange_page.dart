@@ -154,7 +154,6 @@ class ExchangePage extends BasePage {
   @override
   Widget body(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) => _setReactions(context, exchangeViewModel));
-
     return KeyboardActions(
         disableScroll: true,
         config: KeyboardActionsConfig(

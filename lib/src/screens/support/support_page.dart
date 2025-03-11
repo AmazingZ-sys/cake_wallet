@@ -28,47 +28,98 @@ class SupportPage extends BasePage {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 330),
-          child: Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: OptionTile(
-                  image: imageLiveSupport,
-                  title: S.of(context).support_title_live_chat,
-                  description: S.of(context).support_description_live_chat,
-                  onPressed: () {
-                    if (DeviceInfo.instance.isDesktop) {
-                      _launchUrl(supportViewModel.fetchUrl());
-                    } else {
-                      Navigator.pushNamed(context, Routes.supportLiveChat);
-                    }
-                  },
+          child: SingleChildScrollView( // 允许滚动
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(top: 24),
+                  child: OptionTile(
+                    image: imageLiveSupport,
+                    title: S.of(context).support_title_live_chat,
+                    description: S.of(context).support_description_live_chat,
+                    onPressed: () {
+                      if (DeviceInfo.instance.isDesktop) {
+                        _launchUrl(supportViewModel.fetchUrl());
+                      } else {
+                        Navigator.pushNamed(context, Routes.supportLiveChat);
+                      }
+                    },
+                  ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: OptionTile(
-                  image: imageWalletGuides,
-                  title: S.of(context).support_title_guides,
-                  description: S.of(context).support_description_guides,
-                  onPressed: () => _launchUrl(supportViewModel.guidesUrl),
+                Padding(
+                  padding: EdgeInsets.only(top: 24),
+                  child: OptionTile(
+                    image: imageWalletGuides,
+                    title: S.of(context).support_title_guides,
+                    description: S.of(context).support_description_guides,
+                    onPressed: () => _launchUrl(supportViewModel.guidesUrl),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: OptionTile(
-                  image: imageMoreLinks,
-                  title: S.of(context).support_title_other_links,
-                  description: S.of(context).support_description_other_links,
-                  onPressed: () => Navigator.pushNamed(context, Routes.supportOtherLinks),
+                Padding(
+                  padding: EdgeInsets.only(top: 24, bottom: 24), // 添加底部间距，避免滚动到底部太贴边
+                  child: OptionTile(
+                    image: imageMoreLinks,
+                    title: S.of(context).support_title_other_links,
+                    description: S.of(context).support_description_other_links,
+                    onPressed: () => Navigator.pushNamed(context, Routes.supportOtherLinks),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+
+  // @override
+  // Widget body(BuildContext context) {
+  //   return Container(
+  //     child: Center(
+  //       child: ConstrainedBox(
+  //         constraints: BoxConstraints(maxWidth: 330),
+  //         child: Column(
+  //           children: [
+  //             Padding(
+  //               padding: EdgeInsets.only(top: 24),
+  //               child: OptionTile(
+  //                 image: imageLiveSupport,
+  //                 title: S.of(context).support_title_live_chat,
+  //                 description: S.of(context).support_description_live_chat,
+  //                 onPressed: () {
+  //                   if (DeviceInfo.instance.isDesktop) {
+  //                     _launchUrl(supportViewModel.fetchUrl());
+  //                   } else {
+  //                     Navigator.pushNamed(context, Routes.supportLiveChat);
+  //                   }
+  //                 },
+  //               ),
+  //             ),
+  //             Padding(
+  //               padding: EdgeInsets.only(top: 24),
+  //               child: OptionTile(
+  //                 image: imageWalletGuides,
+  //                 title: S.of(context).support_title_guides,
+  //                 description: S.of(context).support_description_guides,
+  //                 onPressed: () => _launchUrl(supportViewModel.guidesUrl),
+  //               ),
+  //             ),
+  //             Padding(
+  //               padding: EdgeInsets.only(top: 24),
+  //               child: OptionTile(
+  //                 image: imageMoreLinks,
+  //                 title: S.of(context).support_title_other_links,
+  //                 description: S.of(context).support_description_other_links,
+  //                 onPressed: () => Navigator.pushNamed(context, Routes.supportOtherLinks),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _launchUrl(String url) async {
     try {
