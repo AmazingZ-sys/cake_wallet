@@ -41,7 +41,7 @@ class BitcoinWalletService extends WalletService<
       case DerivationType.bip39:
         final strength = credentials.seedPhraseLength == 24 ? 256 : 128;
 
-        mnemonic = await MnemonicBip39.generate(strength: strength);
+        mnemonic = credentials.mnemonic ?? await MnemonicBip39.generate(strength: strength);
         break;
       case DerivationType.electrum:
       default:
@@ -106,6 +106,15 @@ class BitcoinWalletService extends WalletService<
     final walletInfo = walletInfoSource.values
         .firstWhereOrNull((info) => info.id == WalletBase.idFor(wallet, getType()))!;
     await walletInfoSource.delete(walletInfo.key);
+
+    final unspentCoinsToDelete = unspentCoinsInfoSource.values.where(
+          (unspentCoin) => unspentCoin.walletId == walletInfo.id).toList();
+
+    final keysToDelete = unspentCoinsToDelete.map((unspentCoin) => unspentCoin.key).toList();
+
+    if (keysToDelete.isNotEmpty) {
+      await unspentCoinsInfoSource.deleteAll(keysToDelete);
+    }
   }
 
   @override

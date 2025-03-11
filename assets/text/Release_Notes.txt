@@ -1,4 +1,5 @@
-Enable BIP39 by default for wallet creation also on Bitcoin/Litecoin (Electrum seed type is still accessible through advanced settings page)
-Improve fee calculation for Bitcoin to protect against overpaying or underpaying
-Enhance auto-address generation for Monero
-Bug fixes and enhancements
+Zano enhancements
+Ethereum enhancements
+Ledger fixes
+UI enhancements
+Bug fixes

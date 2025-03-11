@@ -112,10 +112,12 @@ class WalletRestoreFromKeysFromState extends State<WalletRestoreFromKeysFrom> {
               alignment: Alignment.centerRight,
               children: [
                 BaseTextFormField(
+                  key: ValueKey('wallet_restore_from_keys_wallet_name_textfield_key'),
                   controller: nameTextEditingController,
                   hintText: S.of(context).wallet_name,
                   validator: WalletNameValidator(),
                   suffixIcon: IconButton(
+                    key: ValueKey('wallet_restore_from_keys_wallet_name_refresh_button_key'),
                     onPressed: () async {
                       final rName = await generateName();
                       FocusManager.instance.primaryFocus?.unfocus();
@@ -146,12 +148,14 @@ class WalletRestoreFromKeysFromState extends State<WalletRestoreFromKeysFrom> {
             ),
             if (widget.displayWalletPassword)
               ...[Container(
+                  key: ValueKey('password'),
                   padding: EdgeInsets.only(top: 20.0),
                   child: BaseTextFormField(
                     controller: passwordTextEditingController,
                     hintText: S.of(context).password,
                     obscureText: true)),
                 Container(
+                  key: ValueKey('repeat_wallet_password'),
                   padding: EdgeInsets.only(top: 20.0),
                   child: BaseTextFormField(
                     controller: repeatedPasswordTextEditingController,
@@ -175,6 +179,7 @@ class WalletRestoreFromKeysFromState extends State<WalletRestoreFromKeysFrom> {
       bool nanoBased = widget.walletRestoreViewModel.type == WalletType.nano ||
           widget.walletRestoreViewModel.type == WalletType.banano;
       return AddressTextField(
+        addressKey: ValueKey('wallet_restore_from_key_private_key_textfield_key'),
         controller: privateKeyController,
         placeholder: nanoBased ? S.of(context).seed_hex_form : S.of(context).private_key,
         options: [AddressTextFieldOption.paste],

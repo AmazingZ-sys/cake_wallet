@@ -51,6 +51,7 @@ class DesktopDashboardActions extends StatelessWidget {
                         onTap: () async => await MainActions.sendAction.onTap(context, dashboardViewModel),
                       ),
                     ),
+<<<<<<< HEAD
                   ],
                 ),
                 Row(
@@ -72,6 +73,20 @@ class DesktopDashboardActions extends StatelessWidget {
                         isEnabled: MainActions.sellAction.isEnabled?.call(dashboardViewModel),
                         onTap: () async => await MainActions.sellAction.onTap(context, dashboardViewModel),
                       ),
+=======
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: DesktopActionButton(
+                      title: MainActions.tradeAction.name(context),
+                      image: MainActions.tradeAction.image,
+                      canShow: MainActions.tradeAction.canShow?.call(dashboardViewModel),
+                      isEnabled: MainActions.tradeAction.isEnabled?.call(dashboardViewModel),
+                      onTap: () async => await MainActions.tradeAction.onTap(context, dashboardViewModel),
+>>>>>>> dcd978eb38f370fce975d23517d73aa4728df0f3
                     ),
                   ],
                 ),

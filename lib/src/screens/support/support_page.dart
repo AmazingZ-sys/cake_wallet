@@ -2,17 +2,20 @@ import 'package:cake_wallet/generated/i18n.dart';
 import 'package:cake_wallet/routes.dart';
 import 'package:cake_wallet/src/screens/base_page.dart';
 import 'package:cake_wallet/src/widgets/option_tile.dart';
+import 'package:cake_wallet/themes/extensions/info_theme.dart';
 import 'package:cake_wallet/utils/device_info.dart';
 import 'package:cake_wallet/view_model/support_view_model.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cake_wallet/themes/extensions/dashboard_page_theme.dart';
+import 'package:cake_wallet/themes/theme_base.dart';
 
 class SupportPage extends BasePage {
   SupportPage(this.supportViewModel);
 
   final SupportViewModel supportViewModel;
 
-  final imageLiveSupport = Image.asset('assets/images/live_support.png');
+  final imageLiveSupport = Image.asset('assets/images/cake_icon.png');
   final imageWalletGuides = Image.asset('assets/images/wallet_guides.png');
   final imageMoreLinks = Image.asset('assets/images/more_links.png');
 
@@ -22,8 +25,16 @@ class SupportPage extends BasePage {
   @override
   AppBarStyle get appBarStyle => AppBarStyle.regular;
 
+
+
   @override
   Widget body(BuildContext context) {
+
+    final mainColor = Theme.of(context).extension<DashboardPageTheme>()!.pageTitleTextColor;
+    final brightColor = Theme.of(context).extension<InfoTheme>()!.textColor;
+
+    final iconColor = currentTheme.type == ThemeType.bright ? brightColor : mainColor;
+
     return Container(
       child: Center(
         child: ConstrainedBox(

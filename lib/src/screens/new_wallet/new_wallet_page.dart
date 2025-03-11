@@ -26,10 +26,15 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:mobx/mobx.dart';
 
 class NewWalletPage extends BasePage {
-  NewWalletPage(this._walletNewVM, this._seedSettingsViewModel);
+  NewWalletPage(
+    this._walletNewVM,
+    this._seedSettingsViewModel, {
+    this.isChildWallet = false,
+  });
 
   final WalletNewVM _walletNewVM;
   final SeedSettingsViewModel _seedSettingsViewModel;
+  final bool isChildWallet;
 
   final walletNameImage = Image.asset('assets/images/wallet_name.png');
 
@@ -48,15 +53,23 @@ class NewWalletPage extends BasePage {
 
   @override
   Widget body(BuildContext context) => WalletNameForm(
-      _walletNewVM,
-      currentTheme.type == ThemeType.dark ? walletNameImage : walletNameLightImage,
-      _seedSettingsViewModel);
+        _walletNewVM,
+        currentTheme.type == ThemeType.dark ? walletNameImage : walletNameLightImage,
+        _seedSettingsViewModel,
+        isChildWallet,
+      );
 }
 
 class WalletNameForm extends StatefulWidget {
-  WalletNameForm(this._walletNewVM, this.walletImage, this._seedSettingsViewModel);
+  WalletNameForm(
+    this._walletNewVM,
+    this.walletImage,
+    this._seedSettingsViewModel,
+    this.isChildWallet,
+  );
 
   final WalletNewVM _walletNewVM;
+  final bool isChildWallet;
   final Image walletImage;
   final SeedSettingsViewModel _seedSettingsViewModel;
 
@@ -88,8 +101,14 @@ class _WalletNameFormState extends State<WalletNameForm> {
   void initState() {
     _stateReaction ??= reaction((_) => _walletNewVM.state, (ExecutionState state) async {
       if (state is ExecutedSuccessfullyState) {
-        Navigator.of(navigatorKey.currentContext ?? context)
-            .pushNamed(Routes.preSeedPage, arguments: _walletNewVM.seedPhraseWordsLength);
+        if (widget.isChildWallet) {
+          Navigator.of(navigatorKey.currentContext ?? context)
+              .pushNamed(Routes.walletGroupExistingSeedDescriptionPage,
+              arguments: _walletNewVM.seedPhraseWordsLength);
+        } else {
+          Navigator.of(navigatorKey.currentContext ?? context)
+              .pushNamed(Routes.preSeedPage, arguments: _walletNewVM.seedPhraseWordsLength);
+        }
       }
 
       if (state is FailureState) {
@@ -99,10 +118,13 @@ class _WalletNameFormState extends State<WalletNameForm> {
                 context: context,
                 builder: (_) {
                   return AlertWithOneAction(
-                      alertTitle: S.current.new_wallet,
-                      alertContent: state.error,
-                      buttonText: S.of(context).ok,
-                      buttonAction: () => Navigator.of(context).pop());
+                    key: ValueKey('new_wallet_page_failure_dialog_key'),
+                    buttonKey: ValueKey('new_wallet_page_failure_dialog_button_key'),
+                    alertTitle: S.current.new_wallet,
+                    alertContent: state.error,
+                    buttonText: S.of(context).ok,
+                    buttonAction: () => Navigator.of(context).pop(),
+                  );
                 });
           }
         });
@@ -139,6 +161,7 @@ class _WalletNameFormState extends State<WalletNameForm> {
                       child: Column(
                         children: [
                           TextFormField(
+                            key: ValueKey('new_wallet_page_wallet_name_textformfield_key'),
                             onChanged: (value) => _walletNewVM.name = value,
                             controller: _nameController,
                             textAlign: TextAlign.center,
@@ -169,6 +192,8 @@ class _WalletNameFormState extends State<WalletNameForm> {
                               suffixIcon: Semantics(
                                 label: S.of(context).generate_name,
                                 child: IconButton(
+                                  key: ValueKey(
+                                      'new_wallet_page_wallet_name_textformfield_generate_name_button_key'),
                                   onPressed: () async {
                                     final rName = await generateName();
                                     FocusManager.instance.primaryFocus?.unfocus();
@@ -202,6 +227,7 @@ class _WalletNameFormState extends State<WalletNameForm> {
                           ),
                           if (_walletNewVM.hasWalletPassword) ...[
                             TextFormField(
+                              key: ValueKey('password'),
                               onChanged: (value) => _walletNewVM.walletPassword = value,
                               controller: _passwordController,
                               textAlign: TextAlign.center,
@@ -238,6 +264,7 @@ class _WalletNameFormState extends State<WalletNameForm> {
                               ),
                             ),
                             TextFormField(
+                              key: ValueKey('repeat_wallet_password'),
                               onChanged: (value) => _walletNewVM.repeatedWalletPassword = value,
                               controller: _repeatedPasswordController,
                               textAlign: TextAlign.center,
@@ -284,6 +311,7 @@ class _WalletNameFormState extends State<WalletNameForm> {
                         builder: (BuildContext build) => Padding(
                           padding: EdgeInsets.only(top: 24),
                           child: SelectButton(
+                            key: ValueKey('new_wallet_page_monero_seed_type_button_key'),
                             text: widget._seedSettingsViewModel.moneroSeedType.title,
                             onTap: () async {
                               await showPopUp<void>(
@@ -305,6 +333,7 @@ class _WalletNameFormState extends State<WalletNameForm> {
                         padding: EdgeInsets.only(top: 10),
                         child: SeedLanguageSelector(
                           key: _languageSelectorKey,
+                          buttonKey: ValueKey('new_wallet_page_seed_language_selector_button_key'),
                           initialSelected: defaultSeedLanguage,
                           seedType: _walletNewVM.hasSeedType
                               ? widget._seedSettingsViewModel.moneroSeedType
@@ -323,9 +352,10 @@ class _WalletNameFormState extends State<WalletNameForm> {
               Observer(
                 builder: (context) {
                   return LoadingPrimaryButton(
+                    key: ValueKey('new_wallet_page_confirm_button_key'),
                     onPressed: _confirmForm,
                     text: S.of(context).seed_language_next,
-                    color: Colors.green,
+                    color: Theme.of(context).primaryColor,
                     textColor: Colors.white,
                     isLoading: _walletNewVM.state is IsExecutingState,
                     isDisabled: _walletNewVM.name.isEmpty,
@@ -334,11 +364,13 @@ class _WalletNameFormState extends State<WalletNameForm> {
               ),
               const SizedBox(height: 25),
               GestureDetector(
+                key: ValueKey('new_wallet_page_advanced_settings_button_key'),
                 onTap: () {
                   Navigator.of(context).pushNamed(Routes.advancedPrivacySettings, arguments: {
                     "type": _walletNewVM.type,
                     "useTestnet": _walletNewVM.useTestnet,
-                    "toggleTestnet": _walletNewVM.toggleUseTestnet
+                    "toggleTestnet": _walletNewVM.toggleUseTestnet,
+                    "isChildWallet": widget.isChildWallet,
                   });
                 },
                 child: Text(S.of(context).advanced_settings),

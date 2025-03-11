@@ -19,7 +19,6 @@ class WalletRestoreFromSeedForm extends StatefulWidget {
   WalletRestoreFromSeedForm({Key? key,
     required this.displayLanguageSelector,
     required this.displayBlockHeightSelector,
-    required this.displayPassphrase,
     required this.type,
     required this.displayWalletPassword,
     required this.seedSettingsViewModel,
@@ -35,7 +34,6 @@ class WalletRestoreFromSeedForm extends StatefulWidget {
   final bool displayLanguageSelector;
   final bool displayBlockHeightSelector;
   final bool displayWalletPassword;
-  final bool displayPassphrase;
   final SeedSettingsViewModel seedSettingsViewModel;
   final FocusNode? blockHeightFocusNode;
   final Function(bool)? onHeightOrDateEntered;
@@ -60,8 +58,7 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
         repeatedPasswordTextEditingController = displayWalletPassword
             ? TextEditingController()
             : null,
-        passphraseController = TextEditingController(),
-        seedTypeController = TextEditingController();
+      seedTypeController = TextEditingController();
 
   final GlobalKey<SeedWidgetState> seedWidgetStateKey;
   final GlobalKey<BlockchainHeightState> blockchainHeightKey;
@@ -70,17 +67,16 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
   final TextEditingController? passwordTextEditingController;
   final TextEditingController? repeatedPasswordTextEditingController;
   final TextEditingController seedTypeController;
-  final TextEditingController passphraseController;
   final GlobalKey<FormState> formKey;
   late ReactionDisposer moneroSeedTypeReaction;
   String language;
   void Function()? passwordListener;
   void Function()? repeatedPasswordListener;
-  void Function()? passphraseListener;
 
   @override
   void initState() {
-    _setSeedType(widget.seedSettingsViewModel.moneroSeedType);
+    // _setSeedType(widget.seedTypeViewModel.moneroSeedType);
+    _setSeedType(MoneroSeedType.defaultSeedType);
     _setLanguageLabel(language);
 
     if (passwordTextEditingController != null) {
@@ -94,9 +90,6 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
       repeatedPasswordTextEditingController?.addListener(repeatedPasswordListener!);
     }
 
-    passphraseListener = () => widget.seedSettingsViewModel.setPassphrase(passphraseController.text);
-    passphraseController.addListener(passphraseListener!);
-
     moneroSeedTypeReaction =
         reaction((_) => widget.seedSettingsViewModel.moneroSeedType, (MoneroSeedType item) {
           _setSeedType(item);
@@ -107,7 +100,7 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
   }
 
   @override
-  void dispose() {
+  void dispose() {    
     moneroSeedTypeReaction();
 
     if (passwordListener != null) {
@@ -117,8 +110,6 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
     if (repeatedPasswordListener != null) {
       repeatedPasswordTextEditingController?.removeListener(repeatedPasswordListener!);
     }
-
-    passphraseController.removeListener(passphraseListener!);
 
     super.dispose();
   }
@@ -151,11 +142,13 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
                 alignment: Alignment.centerRight,
                 children: [
                   BaseTextFormField(
+                    key: ValueKey('wallet_restore_from_seed_wallet_name_textfield_key'),
                     controller: nameTextEditingController,
                     hintText: S
                         .of(context)
                         .wallet_name,
                     suffixIcon: IconButton(
+                      key: ValueKey('wallet_restore_from_seed_wallet_name_refresh_button_key'),
                       onPressed: () async {
                         final rName = await generateName();
                         FocusManager.instance.primaryFocus?.unfocus();
@@ -190,12 +183,16 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
               )),
           Container(height: 20),
           SeedWidget(
-              key: seedWidgetStateKey,
-              language: language,
-              type: widget.type,
-              onSeedChange: onSeedChange),
+            key: seedWidgetStateKey,
+            language: language,
+            type: widget.type,
+            onSeedChange: onSeedChange,
+            seedTextFieldKey: ValueKey('wallet_restore_from_seed_wallet_seeds_textfield_key'),
+            pasteButtonKey: ValueKey('wallet_restore_from_seed_wallet_seeds_paste_button_key'),
+          ),
           if (widget.type == WalletType.monero || widget.type == WalletType.wownero)
             GestureDetector(
+              key: ValueKey('wallet_restore_from_seed_seedtype_picker_button_key'),
               onTap: () async {
                 await showPopUp<void>(
                     context: context,
@@ -204,9 +201,9 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
                           items: _getItems(),
                           selectedAtIndex: isPolyseed
                               ? 1
-                              : seedTypeController.value.text.contains("14")
-                              ? 2
-                              : 0,
+                              : seedTypeController.value.text.contains("14") && widget.type == WalletType.wownero
+                                  ? 2
+                                  : 0,
                           mainAxisAlignment: MainAxisAlignment.start,
                           onItemSelected: _changeSeedType,
                           isSeparated: false,
@@ -227,12 +224,14 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
             ),
           if (widget.displayWalletPassword)
             ...[BaseTextFormField(
+                key: ValueKey('password'),
                 controller: passwordTextEditingController,
                 hintText: S
                     .of(context)
                     .password,
                 obscureText: true),
               BaseTextFormField(
+                  key: ValueKey('repeat_wallet_password'),
                   controller: repeatedPasswordTextEditingController,
                   hintText: S
                       .of(context)
@@ -269,18 +268,11 @@ class WalletRestoreFromSeedFormState extends State<WalletRestoreFromSeedForm> {
             BlockchainHeightWidget(
               focusNode: widget.blockHeightFocusNode,
               key: blockchainHeightKey,
+              blockHeightTextFieldKey: ValueKey('wallet_restore_from_seed_blockheight_textfield_key'),
               onHeightOrDateEntered: widget.onHeightOrDateEntered,
               hasDatePicker: widget.type == WalletType.monero || widget.type == WalletType.wownero,
               walletType: widget.type,
             ),
-          if (widget.displayPassphrase) ...[
-            const SizedBox(height: 10),
-            BaseTextFormField(
-              hintText: S.current.passphrase,
-              controller: passphraseController,
-              obscureText: true,
-            ),
-          ]
         ]));
   }
 

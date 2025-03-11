@@ -1,2 +1,3 @@
-Enhance auto-address generation for Monero
-Bug fixes and enhancements
+Ledger fixes
+UI enhancements
+Bug fixes

@@ -10,7 +10,9 @@ import 'package:cake_wallet/solana/solana.dart';
 import 'package:cake_wallet/src/screens/send/widgets/extract_address_from_parsed.dart';
 import 'package:cake_wallet/tron/tron.dart';
 import 'package:cake_wallet/wownero/wownero.dart';
+import 'package:cake_wallet/zano/zano.dart';
 import 'package:cw_core/crypto_currency.dart';
+import 'package:cw_core/utils/print_verbose.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobx/mobx.dart';
@@ -79,6 +81,9 @@ abstract class OutputBase with Store {
   bool get isParsedAddress =>
       parsedAddress.parseFrom != ParseFrom.notParsed && parsedAddress.name.isNotEmpty;
 
+  @observable
+  String? stealthAddress;
+
   @computed
   int get formattedCryptoAmount {
     int amount = 0;
@@ -108,6 +113,9 @@ abstract class OutputBase with Store {
           case WalletType.wownero:
             _amount = wownero!.formatterWowneroParseAmount(amount: _cryptoAmount);
             break;
+          case WalletType.zano:
+            _amount = zano!.formatterParseAmount(amount: _cryptoAmount, currency: cryptoCurrencyHandler());
+            break;
           default:
             break;
         }
@@ -134,9 +142,8 @@ abstract class OutputBase with Store {
           final trc20EstimatedFee = tron!.getTronTRC20EstimatedFee(_wallet) ?? 0;
           return double.parse(trc20EstimatedFee.toString());
         }
-
       }
-      
+
       if (_wallet.type == WalletType.solana) {
         return solana!.getEstimateFees(_wallet) ?? 0.0;
       }
@@ -145,16 +152,16 @@ abstract class OutputBase with Store {
           _settingsStore.priority[_wallet.type]!, formattedCryptoAmount);
 
       if (_wallet.type == WalletType.bitcoin) {
-        if (_settingsStore.priority[_wallet.type] == bitcoin!.getBitcoinTransactionPriorityCustom()) {
-          fee = bitcoin!.getEstimatedFeeWithFeeRate(_wallet,
-              _settingsStore.customBitcoinFeeRate,formattedCryptoAmount);
+        if (_settingsStore.priority[_wallet.type] ==
+            bitcoin!.getBitcoinTransactionPriorityCustom()) {
+          fee = bitcoin!.getEstimatedFeeWithFeeRate(
+              _wallet, _settingsStore.customBitcoinFeeRate, formattedCryptoAmount);
         }
 
         return bitcoin!.formatterBitcoinAmountToDouble(amount: fee);
       }
 
-      if (_wallet.type == WalletType.litecoin ||
-          _wallet.type == WalletType.bitcoinCash) {
+      if (_wallet.type == WalletType.litecoin || _wallet.type == WalletType.bitcoinCash) {
         return bitcoin!.formatterBitcoinAmountToDouble(amount: fee);
       }
 
@@ -177,8 +184,12 @@ abstract class OutputBase with Store {
       if (_wallet.type == WalletType.polygon) {
         return polygon!.formatterPolygonAmountToDouble(amount: BigInt.from(fee));
       }
+
+      if (_wallet.type == WalletType.zano) {
+        return zano!.formatterIntAmountToDouble(amount: fee, currency: cryptoCurrencyHandler(), forFee: true);
+      }
     } catch (e) {
-      print(e.toString());
+      printV(e.toString());
     }
 
     return 0;
@@ -249,7 +260,8 @@ abstract class OutputBase with Store {
     try {
       final fiat = calculateFiatAmount(
           price: _fiatConversationStore.prices[cryptoCurrencyHandler()]!,
-          cryptoAmount: sendAll ? cryptoFullBalance.replaceAll(",", ".") : cryptoAmount.replaceAll(',', '.'));
+          cryptoAmount:
+              sendAll ? cryptoFullBalance.replaceAll(",", ".") : cryptoAmount.replaceAll(',', '.'));
       if (fiatAmount != fiat) {
         fiatAmount = fiat;
       }
@@ -303,6 +315,9 @@ abstract class OutputBase with Store {
         break;
       case WalletType.wownero:
         maximumFractionDigits = 11;
+        break;
+      case WalletType.zano:
+        maximumFractionDigits = 12;
         break;
       default:
         break;

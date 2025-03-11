@@ -2,6 +2,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:cw_core/utils/print_verbose.dart';
 import 'package:cw_wownero/api/account_list.dart';
 import 'package:cw_wownero/api/exceptions/wallet_creation_exception.dart';
 import 'package:cw_wownero/api/exceptions/wallet_opening_exception.dart';
@@ -53,9 +54,9 @@ final wownero.WalletManager wmPtr = Pointer.fromAddress((() {
     // than plugging gdb in. Especially on windows/android.
     wownero.printStarts = false;
     _wmPtr ??= wownero.WalletManagerFactory_getWalletManager();
-    print("ptr: $_wmPtr");
+    printV("ptr: $_wmPtr");
   } catch (e) {
-    print(e);
+    printV(e);
     rethrow;
   }
   return _wmPtr!.address;
@@ -65,6 +66,7 @@ void createWalletSync(
     {required String path,
     required String password,
     required String language,
+    required String passphrase,
     int nettype = 0}) {
   txhistory = null;
   final newWptr = wownero.WalletManager_createWallet(wmPtr,
@@ -75,6 +77,8 @@ void createWalletSync(
     throw WalletCreationException(message: wownero.Wallet_errorString(newWptr));
   }
   wptr = newWptr;
+  wownero.Wallet_setCacheAttribute(wptr!, key: "cakewallet.passphrase", value: passphrase);
+
   wownero.Wallet_store(wptr!, path: path);
   openedWalletsByPath[path] = wptr!;
 
@@ -89,6 +93,7 @@ bool isWalletExistSync({required String path}) {
 void restoreWalletFromSeedSync(
     {required String path,
     required String password,
+    required String passphrase,
     required String seed,
     int nettype = 0,
     int restoreHeight = 0}) {
@@ -101,10 +106,12 @@ void restoreWalletFromSeedSync(
       language: seed, // I KNOW - this is supposed to be called seed
       networkType: 0,
     );
-
+    final oldwptr = wptr;
+    wptr = newWptr;
     setRefreshFromBlockHeight(
       height: wownero.WOWNERO_deprecated_14WordSeedHeight(seed: seed),
     );
+    wptr = oldwptr;
   } else {
     txhistory = null;
     newWptr = wownero.WalletManager_recoveryWallet(
@@ -113,7 +120,7 @@ void restoreWalletFromSeedSync(
       password: password,
       mnemonic: seed,
       restoreHeight: restoreHeight,
-      seedOffset: '',
+      seedOffset: passphrase,
       networkType: 0,
     );
   }
@@ -126,8 +133,13 @@ void restoreWalletFromSeedSync(
   }
 
   wptr = newWptr;
-
+  
+  wownero.Wallet_setCacheAttribute(wptr!, key: "cakewallet.passphrase", value: passphrase);
+  wownero.Wallet_setCacheAttribute(wptr!, key: "cakewallet.seed", value: seed);
+  
   openedWalletsByPath[path] = wptr!;
+
+  store();
 }
 
 void restoreWalletFromKeysSync(
@@ -140,7 +152,7 @@ void restoreWalletFromKeysSync(
     int nettype = 0,
     int restoreHeight = 0}) {
   txhistory = null;
-  final newWptr =  spendKey != ""
+  var newWptr = (spendKey != "")
    ? wownero.WalletManager_createDeterministicWalletFromSpendKey(
     wmPtr,
     path: path,
@@ -165,8 +177,74 @@ void restoreWalletFromKeysSync(
     throw WalletRestoreFromKeysException(
         message: wownero.Wallet_errorString(newWptr));
   }
+  // CW-712 - Try to restore deterministic wallet first, if the view key doesn't
+  // match the view key provided
+  if (spendKey != "") {
+    final viewKeyRestored = wownero.Wallet_secretViewKey(newWptr);
+    if (viewKey != viewKeyRestored && viewKey != "") {
+      wownero.WalletManager_closeWallet(wmPtr, newWptr, false);
+      File(path).deleteSync();
+      File(path+".keys").deleteSync();
+      newWptr = wownero.WalletManager_createWalletFromKeys(
+        wmPtr,
+        path: path,
+        password: password,
+        restoreHeight: restoreHeight,
+        addressString: address,
+        viewKeyString: viewKey,
+        spendKeyString: spendKey,
+        nettype: 0,
+      );
+      final status = wownero.Wallet_status(newWptr);
+      if (status != 0) {
+        throw WalletRestoreFromKeysException(
+            message: wownero.Wallet_errorString(newWptr));
+      }
+    }
+  }
+  wptr = newWptr;
+
+  openedWalletsByPath[path] = wptr!;
+}
+
+
+
+// English only, because normalization.
+void restoreWalletFromPolyseedWithOffset(
+    {required String path,
+    required String password,
+    required String seed,
+    required String seedOffset,
+    required String language,
+    int nettype = 0}) {
+  
+  txhistory = null;
+  final newWptr = wownero.WalletManager_createWalletFromPolyseed(
+    wmPtr,
+    path: path,
+    password: password,
+    networkType: nettype,
+    mnemonic: seed,
+    seedOffset: seedOffset,
+    newWallet: true, // safe to remove
+    restoreHeight: 0,
+    kdfRounds: 1,
+  );
+
+  final status = wownero.Wallet_status(newWptr);
+
+  if (status != 0) {
+    final err = wownero.Wallet_errorString(newWptr);
+    printV("err: $err");
+    throw WalletRestoreFromKeysException(message: err);
+  }
 
   wptr = newWptr;
+
+  wownero.Wallet_setCacheAttribute(wptr!, key: "cakewallet.seed", value: seed);
+  wownero.Wallet_setCacheAttribute(wptr!, key: "cakewallet.passphrase", value: seedOffset);
+
+  storeSync();
 
   openedWalletsByPath[path] = wptr!;
 }
@@ -206,7 +284,7 @@ void restoreWalletFromSpendKeySync(
 
   if (status != 0) {
     final err = wownero.Wallet_errorString(newWptr);
-    print("err: $err");
+    printV("err: $err");
     throw WalletRestoreFromKeysException(message: err);
   }
 
@@ -275,7 +353,7 @@ void loadWallet(
     final status = wownero.Wallet_status(newWptr);
     if (status != 0) {
       final err = wownero.Wallet_errorString(newWptr);
-      print(err);
+      printV(err);
       throw WalletOpeningException(message: err);
     }
     wptr = newWptr;
@@ -287,18 +365,20 @@ void _createWallet(Map<String, dynamic> args) {
   final path = args['path'] as String;
   final password = args['password'] as String;
   final language = args['language'] as String;
+  final passphrase = args['passphrase'] as String;
 
-  createWalletSync(path: path, password: password, language: language);
+  createWalletSync(path: path, password: password, language: language, passphrase: passphrase);
 }
 
 void _restoreFromSeed(Map<String, dynamic> args) {
   final path = args['path'] as String;
   final password = args['password'] as String;
+  final passphrase = args['passphrase'] as String;
   final seed = args['seed'] as String;
   final restoreHeight = args['restoreHeight'] as int;
 
   restoreWalletFromSeedSync(
-      path: path, password: password, seed: seed, restoreHeight: restoreHeight);
+      path: path, password: password, passphrase: passphrase, seed: seed, restoreHeight: restoreHeight);
 }
 
 void _restoreFromKeys(Map<String, dynamic> args) {
@@ -355,23 +435,27 @@ Future<void> createWallet(
         {required String path,
         required String password,
         required String language,
+        required String passphrase,
         int nettype = 0}) async =>
     _createWallet({
       'path': path,
       'password': password,
       'language': language,
+      'passphrase': passphrase,
       'nettype': nettype
     });
 
 Future<void> restoreFromSeed(
         {required String path,
         required String password,
+        required String passphrase,
         required String seed,
         int nettype = 0,
         int restoreHeight = 0}) async =>
     _restoreFromSeed({
       'path': path,
       'password': password,
+      'passphrase': passphrase,
       'seed': seed,
       'nettype': nettype,
       'restoreHeight': restoreHeight
